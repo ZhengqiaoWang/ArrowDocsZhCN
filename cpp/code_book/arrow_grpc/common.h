@@ -6,7 +6,7 @@
 #define PARQUET_FILE_DIR "./flight_datasets/"
 #define PARQUET_FILE_NAME "trade.parquet"
 #define PARQUET_ROWGROUP_RECORDS 10000
-#define RECORD_ROW_NUM 10000000
+#define RECORD_ROW_NUM 100
 #define SERVER_PORT 33000
 
 std::shared_ptr<arrow::Schema> getSchema()

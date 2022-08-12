@@ -147,6 +147,7 @@ arrow::Status func()
 
     auto write_time = std::chrono::steady_clock::now();
     write_parquet_file(*table);
+
     cout << "write file cost:" << formatTime(write_time) << endl;
     return arrow::Status::OK();
 }
