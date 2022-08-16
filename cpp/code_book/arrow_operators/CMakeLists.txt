@@ -31,4 +31,22 @@ target_link_libraries(filter_select_dataset PRIVATE arrow_shared)
 target_link_libraries(filter_select_dataset PRIVATE arrow_dataset)
 target_link_libraries(filter_select_dataset PRIVATE parquet)
 
+# project_dataset
+add_executable(project_dataset project_dataset.cpp)
+target_link_libraries(project_dataset PRIVATE arrow_shared)
+target_link_libraries(project_dataset PRIVATE arrow_dataset)
+target_link_libraries(project_dataset PRIVATE parquet)
+
+# make_partition_parquet
+add_executable(make_partition_parquet make_partition_parquet.cpp)
+target_link_libraries(make_partition_parquet PRIVATE arrow_shared)
+target_link_libraries(make_partition_parquet PRIVATE arrow_dataset)
+target_link_libraries(make_partition_parquet PRIVATE parquet)
+
+# scan_partition_datasets
+add_executable(scan_partition_datasets scan_partition_datasets.cpp)
+target_link_libraries(scan_partition_datasets PRIVATE arrow_shared)
+target_link_libraries(scan_partition_datasets PRIVATE arrow_dataset)
+target_link_libraries(scan_partition_datasets PRIVATE parquet)
+
 add_definitions("-Wall -O2 --std=c++11")
