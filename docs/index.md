@@ -8,8 +8,8 @@
 
 ### C++
 
-- [安装说明](common/Installation.md#c)
-- [CodeBook](cpp/ArrowCodeBookCpp.md)
+- [安装说明](_posts/common/Installation.md#c)
+- [CodeBook](_posts/cpp/ArrowCodeBookCpp.md)
 
 --------------------
 
