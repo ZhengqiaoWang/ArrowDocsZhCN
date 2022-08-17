@@ -1,0 +1,280 @@
+# Apache Arrow 安装手册
+
+> 基于[Apache Arrow 9.0文档](https://arrow.apache.org/install/)翻译。
+
+## C++
+
+### 构建编译C++ Arrow
+
+#### 系统准备
+
+Arrow使用CMake作为配置工具，官方推荐使用`out-of-source`编译方式。
+
+> - In-source build: 使用cmake将arrow与项目源码集成，当你要构建多个版本时（例如一个用于调试，一个用于发布）就不够灵活。
+> - Out-of-source build: 使用cmake从另一个目录调用，构建一个单独的编译环境，与其他环境解耦。创建cpp/build-debug，从目录调用cmake $CMAKE_ARGS ...
+
+编译要求
+
+- C++11编译器。Linux要求GCC 4.8及以上；Windows要求VS2017及以上。
+- CMake 3.5及以上
+- Linux/macOS，具备make或ninja编译工具
+- 编译要求最少1GB内存，debug至少4GB内存，使用docker则至少8GB内存。
+
+在Ubuntu/Debian，可以通过以下命令安装
+
+```shell
+sudo apt-get install \
+     build-essential \
+     cmake
+```
+
+#### 编译
+
+从仓库中clone最新的代码，并进入`cpp`子目录。
+
+> 要求路径不得存在中文，否则可能会出现编译异常
+> 需要安装libssl-dev，否则可能会找不到库
+
+```shell
+git clone https://github.com/apache/arrow.git
+cd arrow/cpp
+```
+
+##### CMake 3.21以上
+
+CMake 3.21.0及以上版本提供了一些用于各种构建预置项，可以使用`cmake --list-presets`获取可用的预置项列表。
+
+```shell
+cmake --list-presets   # from inside the `cpp` subdirectory
+```
+
+你可以使用`cmake -N --preset <preset name>`来检查一个给定的预置所启用的特定选项。
+
+```shell
+cmake --preset -N ninja-debug-minimal
+```
+
+```text
+Preset CMake variables:
+
+  ARROW_BUILD_INTEGRATION="OFF"
+  ARROW_BUILD_STATIC="OFF"
+  ARROW_BUILD_TESTS="OFF"
+  ARROW_EXTRA_ERROR_CONTEXT="ON"
+  ARROW_WITH_RE2="OFF"
+  ARROW_WITH_UTF8PROC="OFF"
+  CMAKE_BUILD_TYPE="Debug"
+```
+
+可以使用支持的预置来构建
+
+```shell
+mkdir build   # from inside the `cpp` subdirectory
+cd build
+cmake .. --preset ninja-debug-minimal
+```
+
+```text
+   Preset CMake variables:
+
+     ARROW_BUILD_INTEGRATION="OFF"
+     ARROW_BUILD_STATIC="OFF"
+     ARROW_BUILD_TESTS="OFF"
+     ARROW_EXTRA_ERROR_CONTEXT="ON"
+     ARROW_WITH_RE2="OFF"
+     ARROW_WITH_UTF8PROC="OFF"
+     CMAKE_BUILD_TYPE="Debug"
+
+   -- Building using CMake version: 3.21.3
+   [ etc. ]
+```
+
+然后编译
+
+```shell
+cmake --build .
+
+tree debug/
+```
+
+```text
+cmake --build .
+[142/142] Creating library symlink debug/libarrow.so.700 debug/libarrow.so
+
+tree debug/
+debug/
+├── libarrow.so -> libarrow.so.700
+├── libarrow.so.700 -> libarrow.so.700.0.0
+└── libarrow.so.700.0.0
+
+0 directories, 3 files
+```
+
+##### CMake 3.21以下
+
+因为没有预设的帮助，因此需要手动写要求了。 CMake默认添加`CMAKE_BUILD_TYPE=release`。
+
+最小编译安装
+
+```shell
+mkdir build-release
+cd build-release
+cmake ..
+make -j8       # if you have 8 CPU cores, otherwise adjust
+```
+
+最小debug安装（包含单元测试）
+
+```shell
+git submodule update --init --recursive
+export ARROW_TEST_DATA=$PWD/../testing/data
+mkdir build-debug
+cd build-debug
+cmake -DCMAKE_BUILD_TYPE=Debug -DARROW_BUILD_TESTS=ON ..
+make -j8       # if you have 8 CPU cores, otherwise adjust
+make unittest  # to run the tests
+```
+
+单元测试用例默认不会被编译，所以需要在编译后手动编译。单元测试依赖CMake的`ctest`工具。
+
+在一些linux环境下，可能因为语言或编码问题导致了一些问题(locale-related errors)，可以尝试添加环境变量来解决。
+
+```shell
+export LC_ALL="en_US.UTF-8"
+```
+
+###### 可选配置项
+
+默认最小化安装，所以如果需要让Arrow支持更多功能，需要手动指定配置项
+
+- `-DARROW_BUILD_UTILITIES=ON`: 构建Arrow命令行工具
+- `-DARROW_COMPUTE=ON`: 计算函数内核和其他支持
+- `-DARROW_CSV=ON`: CSV模块
+- `-DARROW_CUDA=ON`: CUDA支持，需要环境变量中有 $CUDA_HOME
+- `-DARROW_DATASET=ON`: 数据集API，依赖(还是包含？)文件系统API
+- `-DARROW_FILESYSTEM=ON`: 文件系统（包含本地和远程文件系统）API
+- `-DARROW_FLIGHT=ON`: Arrow Flight RPC 支持, 基于gRPC
+- `-DARROW_GANDIVA=ON`: Gandiva表达式编译器,基于 LLVM、 Protocol Buffers 和 re2
+- `-DARROW_GANDIVA_JAVA=ON`: Gandiva Java的JNI绑定
+- `-DARROW_GCS=ON`: 支持GCS
+- `-DARROW_HDFS=ON`: 支持hadoop的文件系统hdfs
+- `-DARROW_JEMALLOC=ON`: 编译Arrow jemalloc-based allocator, 默认开启
+- `-DARROW_JSON=ON`: JSON 解析模块
+- `-DARROW_MIMALLOC=ON`: 编译 Arrow mimalloc-based allocator
+- `-DARROW_ORC=ON`: Arrow integration with Apache ORC
+- `-DARROW_PARQUET=ON`: Apache Parquet libraries and Arrow integration
+- `-DPARQUET_REQUIRE_ENCRYPTION=ON`: Parquet Modular Encryption
+- `-DARROW_PLASMA=ON`: Plasma Shared Memory Object Store
+- `-DARROW_PLASMA_JAVA_CLIENT=ON`: Build Java client for Plasma
+- `-DARROW_PYTHON=ON`: 支持python (构建pyarrow时依赖此项). 这个库必须与你要构建的 pyarrow 的 Python 版本一致。必须安装Numpy。本选项开启会同样开启 ARROW_COMPUTE, ARROW_CSV, ARROW_DATASET, ARROW_FILESYSTEM, ARROW_HDFS, ARROW_JSON.
+- `-DARROW_S3=ON`: Support for Amazon S3-compatible filesystems
+- `-DARROW_WITH_RE2=ON`: Build with support for regular expressions using the re2 library, on by default and used when ARROW_COMPUTE or ARROW_GANDIVA is ON
+- `-DARROW_WITH_UTF8PROC=ON`: Build with support for Unicode properties using the utf8proc library, on by default and used when ARROW_COMPUTE or ARROW_GANDIVA is ON
+- `-DARROW_TENSORFLOW=ON`: Build Arrow with TensorFlow support enabled
+
+> 太多了，详见 <https://arrow.apache.org/docs/developers/cpp/building.html#optional-components> ，此处之将我认为可能对我有价值的翻译了一下
+
+#### 安装
+
+```shell
+sudo make install
+```
+
+> 可以使用
+>
+> ```shell
+> xargs rm < install_manifest.txt
+> ```
+>
+> 删除安装文件
+
+此后可以使用
+
+```shell
+pkg-config --cflags --libs arrow
+```
+
+验证安装
+
+### 使用包管理器安装
+
+#### Debian GNU/Linux、Ubuntu
+
+```shell
+sudo apt update
+sudo apt install -y -V ca-certificates lsb-release wget
+wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+sudo apt update
+sudo apt install -y -V libarrow-dev  libarrow-glib-dev  libarrow-dataset-dev   libarrow-dataset-glib-dev  libarrow-flight-dev  libarrow-flight-glib-dev  libplasma-dev libplasma-glib-dev libgandiva-dev libgandiva-glib-dev libparquet-dev libparquet-glib-dev
+```
+
+#### AlmaLinux 8和Redhat 8
+
+```shell
+sudo dnf install -y epel-release || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
+sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/almalinux/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo dnf config-manager --set-enabled epel || :
+sudo dnf config-manager --set-enabled powertools || :
+sudo dnf config-manager --set-enabled codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-rhui-rpms || :
+sudo subscription-manager repos --enable codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-$(arch)-rpms || :
+sudo dnf install -y arrow-devel # For C++
+sudo dnf install -y arrow-glib-devel # For GLib (C)
+sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo dnf install -y arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
+sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
+sudo dnf install -y gandiva-devel # For Apache Gandiva C++
+sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
+sudo dnf install -y parquet-devel # For Apache Parquet C++
+sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
+```
+
+#### CentOS8
+
+```shell
+sudo dnf install -y epel-release
+sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-stream/apache-arrow-release-latest.rpm
+sudo dnf config-manager --set-enabled epel
+sudo dnf config-manager --set-enabled powertools
+sudo dnf install -y arrow-devel # For C++
+sudo dnf install -y arrow-glib-devel # For GLib (C)
+sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo dnf install -y arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
+sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
+sudo dnf install -y gandiva-devel # For Apache Gandiva C++
+sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
+sudo dnf install -y parquet-devel # For Apache Parquet C++
+sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
+```
+
+#### CentOS7
+
+```shell
+sudo yum install -y epel-release || sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
+sudo yum install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo yum install -y --enablerepo=epel arrow-devel # For C++
+sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
+sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo yum install -y --enablerepo=epel arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
+sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
+```
+
+#### Amazon Linux2
+
+```shell
+sudo amazon-linux-extras install -y epel
+sudo yum install -y https://apache.jfrog.io/artifactory/arrow/amazon-linux/2/apache-arrow-release-latest.rpm
+sudo yum install -y --enablerepo=epel arrow-devel # For C++
+sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
+sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo yum install -y --enablerepo=epel arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
+sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
+```
+
+## Python
+
+等待补充
