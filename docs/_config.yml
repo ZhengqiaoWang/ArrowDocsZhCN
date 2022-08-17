@@ -1,1 +1,12 @@
 remote_theme: ZhengqiaoWang/jekyll-TeXt-theme
+text_skin: default
+highlight_theme: default
+title: "Apache Arrow中文文档"
+
+description: Apache Arrow中文学习手册
+license: CC-BY-NC-4.0
+
+toc:
+  selectors: "h1,h2,h3"
+
+sources: bootcdn
