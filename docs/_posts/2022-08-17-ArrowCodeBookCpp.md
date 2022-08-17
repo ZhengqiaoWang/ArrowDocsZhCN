@@ -1,6 +1,8 @@
 ---
 layout: article
 title: Apache Arrow C++ Codebook
+sidebar:
+   nav: navigator
 ---
 
 *目录
