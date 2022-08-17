@@ -1,4 +1,7 @@
 header:
+  - title:      文档
+    url:        /index
+
   - titles:
       # @start locale config
       en      : &EN       Archive
@@ -51,8 +54,8 @@ header:
       # @end locale config
     url: /about.html
 
-docs-en:
+navigator:
   - title:      首页
     children:
       - title:  首页
-        url:    /docs/index
+        url:    /index

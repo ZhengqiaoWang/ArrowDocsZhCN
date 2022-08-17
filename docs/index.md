@@ -8,8 +8,8 @@
 
 ### C++
 
-- [安装说明](2022-08-17-ArrowCodeBookCpp.md#c)
-- [CodeBook](_posts/2022-08-17-Cpp安装.md)
+- [安装说明](_posts/2022-08-17-Cpp安装.md)
+- [CodeBook](_posts/2022-08-17-ArrowCodeBookCpp.md#c)
 
 --------------------
 
