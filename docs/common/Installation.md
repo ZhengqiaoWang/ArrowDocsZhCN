@@ -1,5 +1,7 @@
 # Apache Arrow 安装手册
 
+{:toc}
+
 > 基于[Apache Arrow 9.0文档](https://arrow.apache.org/install/)翻译。
 
 ## C++
