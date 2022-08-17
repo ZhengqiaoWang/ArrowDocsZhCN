@@ -50,3 +50,9 @@ header:
       tr      : &TR       Hakkında
       # @end locale config
     url: /about.html
+
+docs-en:
+  - title:      首页
+    children:
+      - title:  首页
+        url:    /docs/index

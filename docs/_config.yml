@@ -171,7 +171,6 @@ exclude:
   - jekyll-text-theme.gemspec
   - package-lock.json
   - package.json
-  - /docs
   - /node_modules
   - /screenshots
   - /test
@@ -179,7 +178,7 @@ exclude:
 
 defaults:
   - scope:
-      path: ""
+      path: "docs"
       type: posts
     values:
       layout: article
