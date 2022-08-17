@@ -9,7 +9,7 @@
 ### C++
 
 - [安装说明](_posts/2022-08-17-Cpp安装.md)
-- [CodeBook](_posts/2022-08-17-ArrowCodeBookCpp.md#c)
+- [CodeBook](_posts/2022-08-17-ArrowCodeBookCpp.md##使用c接口)
 
   <ul class="posts">
     {% for post in site.posts %}
