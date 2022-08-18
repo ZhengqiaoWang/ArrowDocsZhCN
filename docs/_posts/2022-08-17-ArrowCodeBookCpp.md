@@ -3,6 +3,8 @@ layout: article
 title: Apache Arrow C++ Codebook
 sidebar:
    nav: navigator
+aside:
+   toc: true
 ---
 
 *目录
