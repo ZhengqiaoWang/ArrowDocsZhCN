@@ -31,8 +31,8 @@ header:
 navigator:
   - title:      主页
     children:
-      -title:   主页
-       url:    /
+      - title:   主页
+        url:    /
   - title:      安装说明
     children:
       - title:  C++
