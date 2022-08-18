@@ -58,7 +58,7 @@ navigator:
   - title:      首页
     children:
       - title:  首页
-        url:    /index
+        url:    /
   - title:      安装说明
     children:
       - title:  C++
