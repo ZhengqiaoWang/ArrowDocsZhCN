@@ -5,6 +5,7 @@ sidebar:
    nav: navigator
 aside:
    toc: true
+permalink: arrow_cpp_codebook
 ---
 
 *目录
