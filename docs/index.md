@@ -1,3 +1,10 @@
+---
+layout: article
+title: Apache Arrow 中文文档
+sidebar:
+   nav: navigator
+---
+
 ## Apache Arrow 中文文档
 
 ### 前言
