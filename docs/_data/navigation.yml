@@ -62,9 +62,9 @@ navigator:
   - title:      安装说明
     children:
       - title:  C++
-        url:    _posts/2022-08-17-安装手册.md##C
+        url:    arrow_installation#C
   - title:      CodeBook
-    url:        _posts/2022-08-17-ArrowCodeBookCpp.md
+    url:        arrow_cpp_codebook
     children:
       - title:  C++
-        url:    _posts/2022-08-17-ArrowCodeBookCpp.md##使用c接口
+        url:    arrow_cpp_codebook#使用c接口
