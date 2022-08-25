@@ -199,3 +199,4 @@ plugins:
   - jekyll-sitemap
   - jemoji
   - jekyll-remote-theme
+  - jekyll-seo-tag
