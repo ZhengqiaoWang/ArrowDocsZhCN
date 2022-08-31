@@ -13,4 +13,10 @@ target_link_libraries(compute_funcs PRIVATE arrow_shared)
 target_link_libraries(compute_funcs PRIVATE arrow_dataset)
 target_link_libraries(compute_funcs PRIVATE parquet)
 
-add_definitions("-Wall -O2 --std=c++11")
+# exenode
+add_executable(exenode exenode.cpp)
+target_link_libraries(exenode PRIVATE arrow_shared)
+target_link_libraries(exenode PRIVATE arrow_dataset)
+target_link_libraries(exenode PRIVATE parquet)
+
+add_definitions("-Wall -O2 -g --std=c++11")

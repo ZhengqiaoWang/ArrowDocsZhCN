@@ -42,4 +42,24 @@ void showAllComputeFuncNames()
         cout << name << ", ";
     }
 }
+
+arrow::Result<std::shared_ptr<arrow::Array>> CreateArray()
+{
+    arrow::DoubleBuilder builder;
+    std::array<double, 5> arr{1.1, -2.2, 3.3, -4.4, 5.5};
+    ARROW_RETURN_NOT_OK(builder.AppendValues(arr.begin(), arr.end()));
+    ARROW_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> rst, builder.Finish());
+    return arrow::ToResult(rst);
+}
+
+arrow::Result<std::shared_ptr<arrow::Array>> CreateArrayWithNull()
+{
+    arrow::DoubleBuilder builder;
+    std::array<double, 5> arr{1.1, -2.2, 3.3, -4.4, 5.5};
+    ARROW_RETURN_NOT_OK(builder.AppendValues(arr.begin(), arr.end()));
+    ARROW_RETURN_NOT_OK(builder.AppendNull());
+    ARROW_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> rst, builder.Finish());
+    return arrow::ToResult(rst);
+}
+
 #endif

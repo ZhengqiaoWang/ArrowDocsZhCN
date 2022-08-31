@@ -738,14 +738,6 @@ void read_single_column_chunk()
 }
 ```
 
-### 读写CSV文件
-
-TODO 找到源码，见compute_and_write_csv_example.cc
-
-### 读写JSON文件
-
-TODO 非短期内重点，优先级2
-
 ## Arrow Flight
 
 Arrow Flight是一个针对tabular数据集优化的RPC框架，建立在gRPC和IPC格式之上。
@@ -1959,4 +1951,217 @@ arrow::Result<std::shared_ptr<arrow::Table>> ScanPartitionedDataset(
 
 ```text
 abs, abs_checked, acos, acos_checked, add, add_checked, all, and, and_kleene, and_not, and_not_kleene, any, approximate_median, array_filter, array_sort_indices, array_take, ascii_capitalize, ascii_center, ascii_is_alnum, ascii_is_alpha, ascii_is_decimal, ascii_is_lower, ascii_is_printable, ascii_is_space, ascii_is_title, ascii_is_upper, ascii_lower, ascii_lpad, ascii_ltrim, ascii_ltrim_whitespace, ascii_reverse, ascii_rpad, ascii_rtrim, ascii_rtrim_whitespace, ascii_split_whitespace, ascii_swapcase, ascii_title, ascii_trim, ascii_trim_whitespace, ascii_upper, asin, asin_checked, assume_timezone, atan, atan2, binary_join, binary_join_element_wise, binary_length, binary_repeat, binary_replace_slice, binary_reverse, bit_wise_and, bit_wise_not, bit_wise_or, bit_wise_xor, case_when, cast, ceil, ceil_temporal, choose, coalesce, cos, cos_checked, count, count_distinct, count_substring, count_substring_regex, cumulative_sum, cumulative_sum_checked, day, day_of_week, day_of_year, day_time_interval_between, days_between, dictionary_encode, divide, divide_checked, drop_null, ends_with, equal, extract_regex, fill_null_backward, fill_null_forward, filter, find_substring, find_substring_regex, floor, floor_temporal, greater, greater_equal, hash_all, hash_any, hash_approximate_median, hash_count, hash_count_distinct, hash_distinct, hash_list, hash_max, hash_mean, hash_min, hash_min_max, hash_one, hash_product, hash_stddev, hash_sum, hash_tdigest, hash_variance, hour, hours_between, if_else, index, index_in, index_in_meta_binary, indices_nonzero, invert, is_dst, is_finite, is_in, is_in_meta_binary, is_inf, is_leap_year, is_nan, is_null, is_valid, iso_calendar, iso_week, iso_year, less, less_equal, list_element, list_flatten, list_parent_indices, list_value_length, ln, ln_checked, log10, log10_checked, log1p, log1p_checked, log2, log2_checked, logb, logb_checked, make_struct, map_lookup, match_like, match_substring, match_substring_regex, max, max_element_wise, mean, microsecond, microseconds_between, millisecond, milliseconds_between, min, min_element_wise, min_max, minute, minutes_between, mode, month, month_day_nano_interval_between, month_interval_between, multiply, multiply_checked, nanosecond, nanoseconds_between, negate, negate_checked, not_equal, or, or_kleene, partition_nth_indices, power, power_checked, product, quantile, quarter, quarters_between, random, rank, replace_substring, replace_substring_regex, replace_with_mask, round, round_temporal, round_to_multiple, second, seconds_between, select_k_unstable, shift_left, shift_left_checked, shift_right, shift_right_checked, sign, sin, sin_checked, sort_indices, split_pattern, split_pattern_regex, sqrt, sqrt_checked, starts_with, stddev, strftime, string_is_ascii, strptime, struct_field, subsecond, subtract, subtract_checked, sum, take, tan, tan_checked, tdigest, true_unless_null, trunc, unique, us_week, us_year, utf8_capitalize, utf8_center, utf8_is_alnum, utf8_is_alpha, utf8_is_decimal, utf8_is_digit, utf8_is_lower, utf8_is_numeric, utf8_is_printable, utf8_is_space, utf8_is_title, utf8_is_upper, utf8_length, utf8_lower, utf8_lpad, utf8_ltrim, utf8_ltrim_whitespace, utf8_normalize, utf8_replace_slice, utf8_reverse, utf8_rpad, utf8_rtrim, utf8_rtrim_whitespace, utf8_slice_codeunits, utf8_split_whitespace, utf8_swapcase, utf8_title, utf8_trim, utf8_trim_whitespace, utf8_upper, value_counts, variance, week, weeks_between, xor, year, year_month_day, years_between
+```
+
+用于计算的输入应为`Datum`类型的数据，包括`Scalar`,`Array`和`ChunkedArray`。许多计算函数可以同时支持array(无论是否chunked)和scalar。
+
+#### 加减乘除
+
+> 代码在 [此处跳转](https://github.com/ZhengqiaoWang/ArrowDocsZhCN/blob/master/cpp/code_book/compute/compute_funcs.cpp)
+
+我们先来实现一个简单的Add。
+
+```c++
+    ARROW_ASSIGN_OR_RAISE(arrow::Datum incremented_datum,
+                          arrow::compute::CallFunction("add", {arr1, arr2}));
+    const std::shared_ptr<arrow::Array> incremented_array = incremented_datum.make_array();
+```
+
+在这里，我们使用了`CallFunction`来对arr1和arr2求和，其作用就是每项都相加。当然，还可以进行其他的操作，例如减法、乘法、除法等。
+
+除直接使用CallFunction之外，还可以配置一些可选项：
+
+```c++
+arrow::compute::ScalarAggregateOptions scalar_aggregate_options;
+        scalar_aggregate_options.skip_nulls = false;
+        ARROW_ASSIGN_OR_RAISE(arrow::Datum min_max, arrow::compute::CallFunction("min_max", {arr3}, &scalar_aggregate_options));
+```
+
+这样在统计最大最小值时就不会跳过空数据了，不过不知道为什么，在这里`null`既表示最大，也可以是最小，于是结果就变得很有意思：
+
+```text
+{min:double = null, max:double = null}
+```
+
+#### 执行计划与分组计算
+
+> 代码在 [此处跳转](https://github.com/ZhengqiaoWang/ArrowDocsZhCN/blob/master/cpp/code_book/compute/exenode.cpp)
+
+执行计划相当于在提前定义好了一系列的处理流程，然后在加载或未加载的数据中进行计算处理（这一部分可以和上面的数据加载结合）。
+
+与上面的`CallFunction`不同的是，分组不能通过`CallFunction`来调用。官方的方法是使用了执行计划来实现这个功能，我理解起来也花了不少时间。不过好在最后理解了一些，基本上可以认为官方的这种写法是异步优化后的结果，可以直接借鉴使用。
+
+在这个例子里，我们将实现一个分组求均值，也就是我们常用的下面形式的SQL（按会员成交额求和）：
+
+```sql
+select t.firm_id, mean(t.trade_val) from fcc_table t group by t.firm_id;
+```
+
+不同于官方重新创建一个`BatchesWithSchema`，这个结构体包含了`schema`和`std::vector<cp::ExecBatch>`，为了保持和前面的一致性，我使用了`Table`表示，于是我的效率肯定不如官方的写法，因为至少多了一层拷贝。
+
+```c++
+// (Doc section: BatchesWithSchema Definition)
+struct BatchesWithSchema {
+  std::vector<cp::ExecBatch> batches;
+  std::shared_ptr<arrow::Schema> schema;
+  // This method uses internal arrow utilities to
+  // convert a vector of record batches to an AsyncGenerator of optional batches
+  arrow::AsyncGenerator<arrow::util::optional<cp::ExecBatch>> gen() const {
+    auto opt_batches = ::arrow::internal::MapVector(
+        [](cp::ExecBatch batch) { return arrow::util::make_optional(std::move(batch)); },
+        batches);
+    arrow::AsyncGenerator<arrow::util::optional<cp::ExecBatch>> gen;
+    gen = arrow::MakeVectorGenerator(std::move(opt_batches));
+    return gen;
+  }
+};
+// (Doc section: BatchesWithSchema Definition)
+```
+
+首先是获取`table`
+
+```c++
+ARROW_ASSIGN_OR_RAISE(auto table, CreateTable());
+```
+
+然后将`table`转成`RecordBatch`。
+
+```c++
+    ARROW_ASSIGN_OR_RAISE(auto rb, table->CombineChunksToBatch(arrow::default_memory_pool()));
+    cout << rb->schema()->ToString() << endl;
+    std::vector<arrow::compute::ExecBatch> batches;
+    for (int i = 0; i < 1; ++i)
+    {
+        ARROW_ASSIGN_OR_RAISE(auto res_batch, rb->SelectColumns({0, 1, 2}));
+        batches.emplace_back(*res_batch);
+    }
+```
+
+声明执行的内容和对应的计划。
+
+```c++
+    arrow::compute::ExecContext exec_context;
+    ARROW_ASSIGN_OR_RAISE(std::shared_ptr<arrow::compute::ExecPlan> plan, arrow::compute::ExecPlan::Make(&exec_context));
+```
+
+然后声明一个用于异步生成Table的`sink_gen`（在后面会转成同步，我不知道为什么要先声明异步的）。
+
+```c++
+arrow::AsyncGenerator<arrow::util::optional<arrow::compute::ExecBatch>> sink_gen;
+```
+
+再声明一个异步的可选`batches`生成器？官方是这么解释的：
+
+> This method uses internal arrow utilities to convert a vector of record batches to an AsyncGenerator of optional batches
+
+```c++
+    arrow::AsyncGenerator<arrow::util::optional<arrow::compute::ExecBatch>> table_gen; // 用于读表的生成器（异步的）
+    auto opt_batches = arrow::internal::MapVector(
+        [](arrow::compute::ExecBatch batch)
+        { return arrow::util::make_optional(std::move(batch)); },
+        batches);
+    table_gen = arrow::MakeVectorGenerator(std::move(opt_batches));
+```
+
+然后就开始设定计划了，分为三步：
+
+第一步加载数据，通过上面的异步的读表生成器加载数据：
+
+```c++
+    // 第一步：加载数据
+    auto source_node_options = arrow::compute::SourceNodeOptions{table->schema(), table_gen};
+    ARROW_ASSIGN_OR_RAISE(arrow::compute::ExecNode * source, arrow::compute::MakeExecNode("source", plan.get(), {}, source_node_options));
+```
+
+第二步开始分组，在分组前，设置好分组计算选项，这里用的是`hash_mean`，对应的可选项是`ScalarAggregateOptions`,设置了跳过`null`。将统计列`a`的平均数，将结果放到列`mean(a)`，以`c`为group进行分组。
+
+```c++
+    // 第二步：统计数据：统计非空数据
+    auto options = std::make_shared<arrow::compute::ScalarAggregateOptions>(true);
+    arrow::compute::Aggregate arr;
+
+    auto aggregate_options =
+        arrow::compute::AggregateNodeOptions{/*aggregates=*/{{"hash_mean", options, "a", "mean(a)"}}, // 计算函数, 函数参数, 用于计算的列, 结果列
+                                             /*keys=*/{"c"}};
+    ARROW_ASSIGN_OR_RAISE(
+        arrow::compute::ExecNode * aggregate,
+        arrow::compute::MakeExecNode("aggregate", plan.get(), {source}, aggregate_options));
+```
+
+第三步设置输出用的异步生成器`sink`:
+
+```c++
+    // 第三步：设置读取用的生成器
+    ARROW_RETURN_NOT_OK(
+        arrow::compute::MakeExecNode("sink", plan.get(), {aggregate}, arrow::compute::SinkNodeOptions{&sink_gen}));
+```
+
+在设置一下输出结构后，就可以生成结果表了
+
+```c++
+    // 设置输出结构
+    auto schema = arrow::schema({
+        arrow::field("mean(a)", arrow::int64()),
+        arrow::field("c", arrow::int64()),
+    });
+```
+
+```c++
+    // 将sink_gen从异步转换成同步的sink_reader
+    std::shared_ptr<arrow::RecordBatchReader> sink_reader =
+        arrow::compute::MakeGeneratorReader(schema, std::move(sink_gen), exec_context.memory_pool());
+
+    // 验证plan
+    ARROW_RETURN_NOT_OK(plan->Validate());
+    std::cout << "ExecPlan created : " << plan->ToString() << std::endl;
+    // 开始执行plan
+    ARROW_RETURN_NOT_OK(plan->StartProducing());
+
+    // 将sink_reader的数据导入到Table结构中
+    std::shared_ptr<arrow::Table> response_table;
+
+    ARROW_ASSIGN_OR_RAISE(response_table,
+                          arrow::Table::FromRecordBatchReader(sink_reader.get()));
+
+    std::cout << "Results : " << response_table->ToString() << std::endl;
+
+    // 停止plan
+    plan->StopProducing();
+    // 标记plan结束
+    auto future = plan->finished();
+    return future.status();
+```
+
+于是我们得到了结果
+
+```text
+a: int64
+b: int64
+c: int64
+ExecPlan created : ExecPlan with 3 nodes:
+2:SinkNode{}
+  1:GroupByNode{keys=["c"], aggregates=[
+        hash_mean(a, {mode=NON_NULL}),
+  ]}
+    0:SourceNode{}
+
+Results : mean(a): int64
+c: int64
+----
+mean(a):
+  [
+    [
+      4,
+      5
+    ]
+  ]
+c:
+  [
+    [
+      1,
+      2
+    ]
+  ]
+
+OK
 ```
