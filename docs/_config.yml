@@ -22,9 +22,9 @@ timezone: Asia/Shanghai # see https://en.wikipedia.org/wiki/List_of_tz_database_
 author:
   type      : person # "person" (default), "organization"
   name      : 王政乔
-  url       : http://me.zhengqiao.wang
+  url       : https://www.zhengqiao.wang
   avatar    : # path or url of avatar image (square)
-  bio       : Nothing
+  bio       : Hello World~
   email     : me@zhengqiao.wang
   github    : zhengqiaowang # "user_name" the last part of your profile url, e.g. https://github.com/user_name
 
@@ -84,7 +84,7 @@ sources: # bootcdn (default), unpkg
 ## => Sharing
 ##############################
 sharing:
-  provider: false # false (default), "addtoany", "addthis", "custom"
+  provider: addtoany # false (default), "addtoany", "addthis", "custom"
 
   ## AddThis
   addthis:
